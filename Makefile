@@ -14,6 +14,9 @@
 # along with this program; if not, write to the Free Software
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+# NOTICE!
+# EF: you must install libattr-devel on RHEL for building the binary!
+
 #
 # Generic settings
 #

@@ -21,6 +21,7 @@
 #define _BSD_SOURCE
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include <getopt.h>
 #include <utime.h>
 #include <attr/xattr.h>
@@ -44,6 +45,9 @@ static bool do_mtime = false;
 
 /* Used to indicate whether empty dirs should be recreated */
 static bool do_emptydirs = false;
+
+/* Used to indicate that numeric user/group IDs will be used to set file ownerships */
+static bool do_numeric = false;
 
 /* Used to create lists of dirs / other files which are missing in the fs */
 static struct metaentry *missingdirs = NULL;
@@ -93,6 +97,10 @@ compare_print(struct metaentry *real, struct metaentry *stored, int cmp)
 		msg(MSG_QUIET, "owner ");
 	if (cmp & DIFF_GROUP)
 		msg(MSG_QUIET, "group ");
+	if (cmp & DIFF_UID)
+		msg(MSG_QUIET, "uid ");
+	if (cmp & DIFF_GID)
+		msg(MSG_QUIET, "gid ");
 	if (cmp & DIFF_MODE)
 		msg(MSG_QUIET, "mode ");
 	if (cmp & DIFF_TYPE)
@@ -154,29 +162,35 @@ compare_fix(struct metaentry *real, struct metaentry *stored, int cmp)
 	    (cmp & ~DIFF_MTIME))
 		msg(MSG_QUIET, "%s:\tchanging metadata\n", real->path);
 
-	while (cmp & (DIFF_OWNER | DIFF_GROUP)) {
-		if (cmp & DIFF_OWNER) {
-			msg(MSG_NORMAL, "%s:\tchanging owner from %s to %s\n",
-			    real->path, real->group, stored->group);
-			owner = xgetpwnam(stored->owner);
-			if (!owner) {
-				msg(MSG_DEBUG, "\tgetpwnam failed: %s\n",
-				    strerror(errno));
-				break;
+	while (cmp & (DIFF_OWNER | DIFF_GROUP) ||
+	       (do_numeric && (cmp & (DIFF_UID | DIFF_GID)))) {
+		if (do_numeric) {
+			uid = stored->uid;
+			gid = stored->gid;
+		} else {
+			if (cmp & DIFF_OWNER) {
+				msg(MSG_NORMAL, "%s:\tchanging owner from %s to %s\n",
+				    real->path, real->group, stored->group);
+				owner = xgetpwnam(stored->owner);
+				if (!owner) {
+					msg(MSG_DEBUG, "\tgetpwnam failed: %s\n",
+					    strerror(errno));
+					break;
+				}
+				uid = owner->pw_uid;
 			}
-			uid = owner->pw_uid;
-		}
 
-		if (cmp & DIFF_GROUP) {
-			msg(MSG_NORMAL, "%s:\tchanging group from %s to %s\n",
-			    real->path, real->group, stored->group);
-			group = xgetgrnam(stored->group);
-			if (!group) {
-				msg(MSG_DEBUG, "\tgetgrnam failed: %s\n",
-				    strerror(errno));
-				break;
+			if (cmp & DIFF_GROUP) {
+				msg(MSG_NORMAL, "%s:\tchanging group from %s to %s\n",
+				    real->path, real->group, stored->group);
+				group = xgetgrnam(stored->group);
+				if (!group) {
+					msg(MSG_DEBUG, "\tgetgrnam failed: %s\n",
+					    strerror(errno));
+					break;
+				}
+				gid = group->gr_gid;
 			}
-			gid = group->gr_gid;
 		}
 
 		if (lchown(real->path, uid, gid)) {
@@ -349,6 +363,7 @@ usage(const char *arg0, const char *message)
 	    "Valid OPTIONS are:\n"
 	    "  -v, --verbose\t\tPrint more verbose messages\n"
 	    "  -q, --quiet\t\tPrint less verbose messages\n"
+	    "  -n, --numeric\t\tApply numeric uid/gid instead of names\n"
 	    "  -m, --mtime\t\tAlso take mtime into account for diff or apply\n"
 	    "  -e, --empty-dirs\tRecreate missing empty directories (experimental)\n"
 	    "  -f, --file   <file>\tSet metadata file\n"
@@ -363,6 +378,7 @@ static struct option long_options[] = {
 	{"compare", 0, 0, 0},
 	{"save", 0, 0, 0},
 	{"apply", 0, 0, 0},
+	{"numeric", 0, 0, 0},
 	{"help", 0, 0, 0},
 	{"verbose", 0, 0, 0},
 	{"quiet", 0, 0, 0},
@@ -387,7 +403,7 @@ main(int argc, char **argv, char **envp)
 	i = 0;
 	while (1) {
 		int option_index = 0;
-		c = getopt_long(argc, argv, "csahvqmef:d:",
+		c = getopt_long(argc, argv, "csanhvqmef:d:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -402,6 +418,9 @@ main(int argc, char **argv, char **envp)
 			} else if (!strcmp("mtime",
 					   long_options[option_index].name)) {
 				do_mtime = true;
+			} else if (!strcmp("numeric",
+					   long_options[option_index].name)) {
+				do_numeric = true;
 			} else if (!strcmp("empty-dirs",
 					   long_options[option_index].name)) {
 				do_emptydirs = true;
@@ -431,6 +450,9 @@ main(int argc, char **argv, char **envp)
 		case 'h':
 			action |= ACTION_HELP;
 			i++;
+			break;
+		case 'n':
+			do_numeric = true;
 			break;
 		case 'v':
 			adjust_verbosity(1);

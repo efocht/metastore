@@ -24,6 +24,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include <unistd.h>
 #include <attr/xattr.h>
 #include <limits.h>
@@ -147,6 +148,8 @@ mentry_print(const struct metaentry *mentry)
 	msg(MSG_DEBUG, "path\t\t: %s\n", mentry->path);
 	msg(MSG_DEBUG, "owner\t\t: %s\n", mentry->owner);
 	msg(MSG_DEBUG, "group\t\t: %s\n", mentry->group);
+	msg(MSG_DEBUG, "uid\t\t: %d\n", mentry->uid);
+	msg(MSG_DEBUG, "gid\t\t: %d\n", mentry->gid);
 	msg(MSG_DEBUG, "mtime\t\t: %ld\n", (unsigned long)mentry->mtime);
 	msg(MSG_DEBUG, "mtimensec\t: %ld\n", (unsigned long)mentry->mtimensec);
 	msg(MSG_DEBUG, "mode\t\t: %ld\n", (unsigned long)mentry->mode);
@@ -192,25 +195,29 @@ mentry_create(const char *path)
 		return NULL;
 	}
 
+	mentry = mentry_alloc();
 	pbuf = xgetpwuid(sbuf.st_uid);
 	if (!pbuf) {
-		msg(MSG_ERROR, "getpwuid failed for %s: uid %i not found\n",
+		msg(MSG_NORMAL, "getpwuid failed for %s: uid %i not found\n",
 		    path, (int)sbuf.st_uid);
-		return NULL;
+		mentry->owner = xstrdup("nobody");
+	} else {
+		mentry->owner = xstrdup(pbuf->pw_name);
 	}
 
 	gbuf = xgetgrgid(sbuf.st_gid);
 	if (!gbuf) {
-		msg(MSG_ERROR, "getgrgid failed for %s: gid %i not found\n",
+		msg(MSG_NORMAL, "getgrgid failed for %s: gid %i not found\n",
 		    path, (int)sbuf.st_gid);
-		return NULL;
+		mentry->group = xstrdup("nobody");
+	} else {
+		mentry->group = xstrdup(gbuf->gr_name);
 	}
 
-	mentry = mentry_alloc();
 	mentry->path = xstrdup(path);
 	mentry->pathlen = strlen(mentry->path);
-	mentry->owner = xstrdup(pbuf->pw_name);
-	mentry->group = xstrdup(gbuf->gr_name);
+	mentry->uid = sbuf.st_uid;
+	mentry->gid = sbuf.st_gid;
 	mentry->mode = sbuf.st_mode & 0177777;
 	mentry->mtime = sbuf.st_mtim.tv_sec;
 	mentry->mtimensec = sbuf.st_mtim.tv_nsec;
@@ -347,9 +354,7 @@ mentries_recurse(const char *path, struct metahash *mhash)
 
 		while ((dent = readdir(dir))) {
 			if (!strcmp(dent->d_name, ".") ||
-			    !strcmp(dent->d_name, "..") ||
-			    !strcmp(dent->d_name, ".hg") ||
-			    !strcmp(dent->d_name, ".git"))
+			    !strcmp(dent->d_name, ".."))
 				continue;
 			snprintf(tpath, PATH_MAX, "%s/%s", path, dent->d_name);
 			tpath[PATH_MAX - 1] = '\0';
@@ -395,6 +400,8 @@ mentries_tofile(const struct metahash *mhash, const char *path)
 			write_string(mentry->path, to);
 			write_string(mentry->owner, to);
 			write_string(mentry->group, to);
+			write_int((uint64_t)mentry->uid, 8, to);
+			write_int((uint64_t)mentry->gid, 8, to);
 			write_int((uint64_t)mentry->mtime, 8, to);
 			write_int((uint64_t)mentry->mtimensec, 8, to);
 			write_int((uint64_t)mentry->mode, 2, to);
@@ -478,6 +485,8 @@ mentries_fromfile(struct metahash **mhash, const char *path)
 		mentry->pathlen = strlen(mentry->path);
 		mentry->owner = read_string(&ptr, max);
 		mentry->group = read_string(&ptr, max);
+		mentry->uid = (uid_t)read_int(&ptr, 8, max);
+		mentry->gid = (gid_t)read_int(&ptr, 8, max);
 		mentry->mtime = (time_t)read_int(&ptr, 8, max);
 		mentry->mtimensec = (time_t)read_int(&ptr, 8, max);
 		mentry->mode = (mode_t)read_int(&ptr, 2, max);
@@ -570,6 +579,12 @@ mentry_compare(struct metaentry *left, struct metaentry *right, bool do_mtime)
 
 	if (strcmp(left->group, right->group))
 		retval |= DIFF_GROUP;
+
+	if (left->uid != right->uid)
+		retval |= DIFF_UID;
+
+	if (left->gid != right->gid)
+		retval |= DIFF_GID;
 
 	if ((left->mode & 07777) != (right->mode & 07777))
 		retval |= DIFF_MODE;

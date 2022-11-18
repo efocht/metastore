@@ -32,6 +32,8 @@ ENTRY format
 CSTRING - Path (absolute or relative)
 CSTRING - Owner (owner name, not uid)
 CSTRING - Group (group name, not gid)
+INT(8)  - uid
+INT(8)  - gid
 
 INT(8)  - Mtime (seconds)
 INT(8)  - Mtime (nanoseconds)
