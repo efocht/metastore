@@ -42,11 +42,20 @@ once for even less verbosity.
 .B -m, --mtime
 Causes metastore to also take mtime into account for the compare or apply actions.
 .TP
+.B -n, --numeric
+Causes metastore to apply stored numeric uid/gid instead of user/group names. Without
+this option the uid/gid will be resolved from the passwd and group files from /etc
+or the directory pointed to by the -d option.
+.TP
 .B -e, --empty-dirs
 Also attempts to recreate missing empty directories. May be useful where
 empty directories are not tracked (e.g. by git or cvs).
 Only works in combination with the \fBapply\fR option.
 This is currently an experimental feature.
+.TP
+.B -d, --pwdir
+Directory where the passwd and group files are looked up for resolving the numeric
+uid/gid to which the files/directories need to be set in an apply action.
 .TP
 .B -f <file>, --file <file>
 Causes the metadata to be saved, read from the specified file rather
