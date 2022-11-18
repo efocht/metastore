@@ -1,0 +1,11 @@
+Package: metastore
+Version: 1
+Architecture: amd64
+Maintainer: David Härdeman <david@hardeman.nu>
+Installed-Size: 88
+Depends: libc6 (>= 2.4)
+Section: misc
+Priority: optional
+Description: Store and restore metadata
+ This package contains the metastore tool to store and restore metadata
+ from a filesystem.

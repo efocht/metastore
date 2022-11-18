@@ -1,0 +1,6 @@
+dc94de10b6cb18e280a7fe1325813c7f  usr/share/doc/metastore/changelog.gz
+844f2c42644b27e09ac3ffc78dc4450a  usr/share/doc/metastore/copyright
+d454fee69c8b434e64896a7e46e102db  usr/share/doc/metastore/examples/git-metapull
+7bf20c2f9087a867cd9f6848a87588c6  usr/share/doc/metastore/examples/pre-commit
+a690e40cc1e1652ac6814e20bb067250  usr/share/man/man1/metastore.1.gz
+c4396175ffd39418728086fa54e588da  usr/bin/metastore
