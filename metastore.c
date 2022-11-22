@@ -98,9 +98,9 @@ compare_print(struct metaentry *real, struct metaentry *stored, int cmp)
 	if (cmp & DIFF_GROUP)
 		msg(MSG_QUIET, "group ");
 	if (cmp & DIFF_UID)
-		msg(MSG_QUIET, "uid ");
+		msg(MSG_QUIET, "uid (stored:%d, real:%d) ", stored->uid, real->uid);
 	if (cmp & DIFF_GID)
-		msg(MSG_QUIET, "gid ");
+		msg(MSG_QUIET, "gid (stored:%d, real:%d) ", stored->gid, real->gid);
 	if (cmp & DIFF_MODE)
 		msg(MSG_QUIET, "mode ");
 	if (cmp & DIFF_TYPE)
