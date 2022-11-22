@@ -18,6 +18,8 @@
  *
  */
 
+#include <stdbool.h>
+
 /* Each file starts with SIGNATURE and VERSION */
 #define SIGNATURE    "MeTaSt00r3"
 #define SIGNATURELEN 10
@@ -32,6 +34,9 @@
 #define ACTION_SAVE  0x02
 #define ACTION_APPLY 0x04
 #define ACTION_HELP  0x08
+
+/* Used to indicate that numeric user/group IDs will be used to set file ownerships */
+extern bool do_numeric;
 
 /* Used to store the name of the file containing the metadata */
 extern char *metafile;

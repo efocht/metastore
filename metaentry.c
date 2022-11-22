@@ -198,18 +198,26 @@ mentry_create(const char *path)
 	mentry = mentry_alloc();
 	pbuf = xgetpwuid(sbuf.st_uid);
 	if (!pbuf) {
-		msg(MSG_NORMAL, "getpwuid failed for %s: uid %i not found\n",
-		    path, (int)sbuf.st_uid);
-		mentry->owner = xstrdup("nobody");
+		if (do_numeric) {
+			mentry->owner = xstrdup("nobody");
+		} else {
+			msg(MSG_ERROR, "getpwuid failed for %s: uid %i not found\n",
+			    path, (int)sbuf.st_uid);
+			return NULL;
+		}
 	} else {
 		mentry->owner = xstrdup(pbuf->pw_name);
 	}
 
 	gbuf = xgetgrgid(sbuf.st_gid);
 	if (!gbuf) {
-		msg(MSG_NORMAL, "getgrgid failed for %s: gid %i not found\n",
-		    path, (int)sbuf.st_gid);
-		mentry->group = xstrdup("nobody");
+		if (do_numeric) {
+			mentry->group = xstrdup("nobody");
+		} else {
+			msg(MSG_ERROR, "getgrgid failed for %s: gid %i not found\n",
+			    path, (int)sbuf.st_gid);
+			return NULL;
+		}
 	} else {
 		mentry->group = xstrdup(gbuf->gr_name);
 	}
@@ -574,17 +582,19 @@ mentry_compare(struct metaentry *left, struct metaentry *right, bool do_mtime)
 	if (strcmp(left->path, right->path))
 		return -1;
 
-	if (strcmp(left->owner, right->owner))
-		retval |= DIFF_OWNER;
+	if (do_numeric) {
+		if (left->uid != right->uid)
+			retval |= DIFF_UID;
 
-	if (strcmp(left->group, right->group))
-		retval |= DIFF_GROUP;
+		if (left->gid != right->gid)
+			retval |= DIFF_GID;
+	} else {
+		if (strcmp(left->owner, right->owner))
+			retval |= DIFF_OWNER;
 
-	if (left->uid != right->uid)
-		retval |= DIFF_UID;
-
-	if (left->gid != right->gid)
-		retval |= DIFF_GID;
+		if (strcmp(left->group, right->group))
+			retval |= DIFF_GROUP;
+	}
 
 	if ((left->mode & 07777) != (right->mode & 07777))
 		retval |= DIFF_MODE;

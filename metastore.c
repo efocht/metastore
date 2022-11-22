@@ -18,7 +18,7 @@
  *
  */
 
-#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -40,14 +40,14 @@ char *metafile = METAFILE;
 char *pwdfilepath = NULL;
 char *grpfilepath = NULL;
 
+/* Used to indicate that numeric user/group IDs will be used to set file ownerships */
+bool do_numeric = false;
+
 /* Used to indicate whether mtimes should be corrected */
 static bool do_mtime = false;
 
 /* Used to indicate whether empty dirs should be recreated */
 static bool do_emptydirs = false;
-
-/* Used to indicate that numeric user/group IDs will be used to set file ownerships */
-static bool do_numeric = false;
 
 /* Used to create lists of dirs / other files which are missing in the fs */
 static struct metaentry *missingdirs = NULL;
@@ -162,7 +162,7 @@ compare_fix(struct metaentry *real, struct metaentry *stored, int cmp)
 	    (cmp & ~DIFF_MTIME))
 		msg(MSG_QUIET, "%s:\tchanging metadata\n", real->path);
 
-	while (cmp & (DIFF_OWNER | DIFF_GROUP) ||
+	while ((!do_numeric && (cmp & (DIFF_OWNER | DIFF_GROUP))) ||
 	       (do_numeric && (cmp & (DIFF_UID | DIFF_GID)))) {
 		if (do_numeric) {
 			uid = stored->uid;
@@ -363,7 +363,7 @@ usage(const char *arg0, const char *message)
 	    "Valid OPTIONS are:\n"
 	    "  -v, --verbose\t\tPrint more verbose messages\n"
 	    "  -q, --quiet\t\tPrint less verbose messages\n"
-	    "  -n, --numeric\t\tApply numeric uid/gid instead of names\n"
+	    "  -n, --numeric\t\tApply or compare numeric uid/gid instead of names\n"
 	    "  -m, --mtime\t\tAlso take mtime into account for diff or apply\n"
 	    "  -e, --empty-dirs\tRecreate missing empty directories (experimental)\n"
 	    "  -f, --file   <file>\tSet metadata file\n"
