@@ -102,7 +102,7 @@ compare_print(struct metaentry *real, struct metaentry *stored, int cmp)
 	if (cmp & DIFF_GID)
 		msg(MSG_QUIET, "gid (stored:%d, real:%d) ", stored->gid, real->gid);
 	if (cmp & DIFF_MODE)
-		msg(MSG_QUIET, "mode ");
+		msg(MSG_QUIET, "mode (stored:%o, real:%o) ", stored->mode & 07777, real->mode & 07777);
 	if (cmp & DIFF_TYPE)
 		msg(MSG_QUIET, "type ");
 	if ((cmp & DIFF_MTIME) && ! S_ISLNK(real->mode))
